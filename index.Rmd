@@ -134,7 +134,8 @@ The following is the confusion matrix statistics for the selected random forest 
 rfCM
 ```
 
-From the confusion matrix in the output, we can see that the actual versus predicted classe variable is correct most of the time which illustrates the `r bestAccuracy`% accuracy rate of the random forest model. 
+From the confusion matrix in the output, we can see that the actual versus predicted classe variable is correct most of the time which illustrates the `r bestAccuracy`% accuracy rate of the random forest model. The sample error
+comes out to be `r 100-bestAccuracy` %. With the cross validation as a basis of model fitting, it is concluded that accuracy (and sample error) will be in this range also for new predictions.
 
 
 ## Final Prediction on Testing Data
