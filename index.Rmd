@@ -2,23 +2,23 @@
 output: html_document
 ---
 
-# Machine Learning Aissgnment: Exercise Classification Prediction
+# Machine Learning Aissgnment: Exercise Quality Prediction from Sensor Data
 
 ### Marvin J. Rich
-### 2/12/17
+### February 12th, 2017
 
 ## Document Overview
 
-This report evaluates sensor data, placed on various subjects and exercise equipment, to determine if the level of correct exercise format can be predicted utilizing just the data from these sensor observations. Training data is used to tune multiple machine learning methods. Finally a one time test set is used to predict the exercise correctness level based solely on observation data.
+This report evaluates sensor data, placed on various subjects and exercise equipment, to determine if the level of correct exercise format quality can be predicted utilizing just the data from these sensor observations. Training data was used to tune multiple machine learning method models. Finally a one time test set was used to predict an exercise quality level (A-E) based solely on observation data.
 
-## Exploratory Analysis
+## Exploratory Analysis and Data Reduction
 
-There are 160 variables in the data. This large number is detrimental to machine learning performance. The sensor data is closest to influencing exercise decisions on movement. Utilizing this fact, we can reduce the number of variables. The following R code was used to read the data into R to arrive at the previous strategy of variable reduction.
+This code reads in the testing and training data into R:
 
-```{r echo=TRUE,cache=TRUE}
+```{r echo=TRUE,cache=TRUE,message=FALSE,warning=FALSE}
 #-- access libraries
-suppressMessages(library(caret))
-suppressMessages(library(ggplot2))
+library(caret)
+library(ggplot2)
 
 #-- download testing & training datasets 
 download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
@@ -29,11 +29,14 @@ download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testi
 #-- Read training and testing data into R
 training <- read.csv("training.csv")
 testing  <- read.csv("testing.csv")
-
+numDataVars <- dim(training)[2]
 
 ```
 
-We can reduce the number of variables by 1) eliminating variables not relevent to the problem, 2) eliminating factor variables not relevent to instrument observation data, and 3) eliminating variables with a preponderance of missing data. The outcome variable must be included (even though it is also a factor variable):
+There are `r numDataVars` variables in the training and test data. This large number is detrimental to machine learning performance. 
+
+In order to reduce the number of variables used in model training and prediction, the philosophy was used to just capture the measurements that were associated with movement, since this data is closest to influencing exercise correctness decisions. Here is the R code that reduced input variables based on the previous philosophy:
+
 
 ```{r echo=TRUE,cache=TRUE}
 #-- Set seed for reproducability
@@ -52,24 +55,36 @@ t3 <- t2[,notNA]
 testing <- cbind(testing[,names(t3)],problem_id=testing$problem_id)
 #-- append the outcome variable in final training set
 training <- cbind(t3,classe=training$classe)
+names(training)
+numVars <- length(names(training))
 ```
 
+The number of variables was reduced from `r numDataVars` to `r numVars` by 1) eliminating variables not relevant to the problem (i.e. names, dates, etc.), 2) eliminating factor variables not relevant to instrument observation data, and 3) eliminating variables with a preponderance of missing data (NA's). The outcome variable, classe, must be included (even though it is also a factor variable, it is what we'll be predicting):
 
-## Data Partitioning, Cross Validation and Model Selection
-Once we've arrived at the number of variables to use, the testing data is partitioned into seperate training and test sets. The original testing data will be used for a one time final prediction. In order to assure the testing data yields a reasonable accuracy with respect to new data, K-Fold cross validation will be used on all models. A total of three models were selected for evaluation: a boosting model (gbm), a random forest model (rf), and a naive Bayes model (nb).  
+## Partitioning of Training Data
 
-```{r echo=FALSE,cache=TRUE}
+Once we've arrived at the number of variables to use, the original training data is partitioned into separate training and test sets. Since this data is our "in sample" data for internal training and testing. The original testing data was only used for a one time final prediction. 
+
+```{r echo=TRUE,cache=TRUE}
 #-- Data Partitioning
 inTrain <- createDataPartition(y=training$classe,p=0.7,list=FALSE)
 trn <- training[inTrain,]
 tst <- training[-inTrain,]
+```
 
+## Cross Validataion
+In order to assure the testing data yields a reasonable accuracy with respect to new data, K-Fold cross validation was used on all models. It utilizes three re-samples of the testing data to get an average of the prediction accuracy, which will be more reflective of the actual testing accuracy one would experience with new data.
+
+```{r echo=TRUE,cache=TRUE}
 #-- K-Fold Cross Validation Used
 crossVal <- trainControl(method="cv",number=3)
 ```
 
-## Model Fitting and Performance Evaluation
-The three selected prediction algorithms are fitted using the training portion of the original training data. The test prediction is then performed utilizing the test portion of the original testing data.
+## Model Selection, Fitting, Prediction and Accuracy 
+
+A total of three candidate machine learning algorithm models were selected for evaluation: a boosting model (gbm), a random forest model (rf), and a naive Bayes model (nb).
+
+The three selected prediction models were fitted using the training subset of the original training data. The test (in sample) prediction was then performed utilizing the remaining test portion of the original training data.
 
 ```{r echo=TRUE,cache=TRUE,message=FALSE,warning=FALSE}
 #-- Fit a gbm, rf, and nb model with the in-sample train data
@@ -85,7 +100,7 @@ rfPred  <- predict(rfMdl,tst)
 nbPred  <- predict(nbMdl,tst)  
 ```
 
-The prediction performance of each algorithm is evaluated based on the prediction outcome of the testing portion of the original testing data. We can see from the plot that, in terms of prediction accuracy, the RF model is 1st, followed by the gbm model, and finally the nb model.
+The prediction performance of each algorithm was evaluated based on the prediction outcome of the testing portion of the original testing data. We can see from the following plot that, in terms of prediction accuracy, the RF model is 1st, followed by the gbm model, and finally the nb model.
 
 ```{r echo=TRUE,cache=TRUE}
 #-- Get Performance Metrics for each model
@@ -95,7 +110,7 @@ mdlplot <-bwplot(modPerf,layout=c(2,1))
 mdlplot
 ```
 
-We can use confusionMatrix data to get actual accuracy values:
+We utilized confusionMatrix() function output data to get actual accuracy values:
 
 ```{r echo=TRUE,cache=TRUE}
 #-- Get accuracy values via confusion matricies
@@ -111,11 +126,20 @@ bestModel <- rfMdl
 bestAccuracy <- round(rfCM$overall[1]*100,2)
 ```
 
-We see that the rf (random forest) model has the best accuracy of `r bestAccuracy` percent. With this high accuracy percentage, it doesn't appear that model stacking is needed to boost the overall accuracy further. 
+We see that the rf (random forest) model has the best accuracy of `r bestAccuracy` percent. With this high accuracy percentage, it doesn't appear that additional processing, such as model stacking, was needed to boost the overall accuracy further. So the random forest (rf) model was used for final prediction.
+
+The following is the confusion matrix statistics for the selected random forest model:
+
+```{r echo=TRUE,cache=TRUE}
+rfCM
+```
+
+From the confusion matrix in the output, we can see that the actual versus predicted classe variable is correct most of the time which illustrates the `r bestAccuracy`% accuracy rate of the random forest model. 
 
 
 ## Final Prediction on Testing Data
-The rf model is used to perform the final prediction on the original testing data. The testing data has 20 observations from which each exercise class (A-E) is predicted:
+
+The random forest (rf) model was used to perform the final prediction on the original testing data. The testing data has 20 observations from which an each exercise quality class (A-E) was predicted for each observation:
 
 ```{r echo=TRUE,cache=TRUE}
 finalPred <- predict(bestModel,testing)
@@ -123,4 +147,5 @@ print(finalPred)
 ```
 
 ## Conclusions
-The previous analysis of exercise sensory data utilized data exploration to reduce the number of prediction variables. Cross validation was used to further enhance the predictive capabilities of three candidate machine learning algorithms. One of the three machine learning algorithms, random forests, was chosen based on its prediction accuracy (`r bestAccuracy`%) on the test data. Finally the random forests model was used to predict the exercise class for twenty independent observations. 
+
+The previous analysis of exercise sensory data utilized data exploration to assess the data and reduce the number of prediction variables. A total of three models were introduced to assess their predictive capabilities. A boosting model, a random forrest model, and a naive bayes model. Cross validation was used on the selected models to further enhance their predictive capabilities on training data. Of the three candidate machine learning models, the random forests model was chosen based on its prediction accuracy (`r bestAccuracy`%) on the test data. Finally the random forests model was used to predict the exercise quality classification for twenty independent observations. 

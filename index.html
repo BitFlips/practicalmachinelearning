@@ -118,25 +118,24 @@ $(document).ready(function () {
 </div>
 
 
-<div id="machine-learning-aissgnment-exercise-classification-prediction" class="section level1">
-<h1>Machine Learning Aissgnment: Exercise Classification Prediction</h1>
+<div id="machine-learning-aissgnment-exercise-quality-prediction-from-sensor-data" class="section level1">
+<h1>Machine Learning Aissgnment: Exercise Quality Prediction from Sensor Data</h1>
 <div id="marvin-j.-rich" class="section level3">
 <h3>Marvin J. Rich</h3>
 </div>
-<div id="section" class="section level3">
-<h3>2/12/17</h3>
+<div id="february-12th-2017" class="section level3">
+<h3>February 12th, 2017</h3>
 </div>
 <div id="document-overview" class="section level2">
 <h2>Document Overview</h2>
-<p>This report evaluates sensor data, placed on various subjects and exercise equipment, to determine if the level of correct exercise format can be predicted utilizing just the data from these sensor observations. Training data is used to tune multiple machine learning methods. Finally a one time test set is used to predict the exercise correctness level based solely on observation data.</p>
+<p>This report evaluates sensor data, placed on various subjects and exercise equipment, to determine if the level of correct exercise format quality can be predicted utilizing just the data from these sensor observations. Training data was used to tune multiple machine learning method models. Finally a one time test set was used to predict an exercise quality level (A-E) based solely on observation data.</p>
 </div>
-<div id="exploratory-analysis" class="section level2">
-<h2>Exploratory Analysis</h2>
-<p>There are 160 variables in the data. This large number is detrimental to machine learning performance. The sensor data is closest to influencing exercise decisions on movement. Utilizing this fact, we can reduce the number of variables. The following R code was used to read the data into R to arrive at the previous strategy of variable reduction.</p>
+<div id="exploratory-analysis-and-data-reduction" class="section level2">
+<h2>Exploratory Analysis and Data Reduction</h2>
+<p>This code reads in the testing and training data into R:</p>
 <pre class="r"><code>#-- access libraries
-suppressMessages(library(caret))</code></pre>
-<pre><code>## Warning: package 'caret' was built under R version 3.3.2</code></pre>
-<pre class="r"><code>suppressMessages(library(ggplot2))
+library(caret)
+library(ggplot2)
 
 #-- download testing &amp; training datasets 
 download.file(url=&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;,
@@ -146,8 +145,10 @@ download.file(url=&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-
 
 #-- Read training and testing data into R
 training &lt;- read.csv(&quot;training.csv&quot;)
-testing  &lt;- read.csv(&quot;testing.csv&quot;)</code></pre>
-<p>We can reduce the number of variables by 1) eliminating variables not relevent to the problem, 2) eliminating factor variables not relevent to instrument observation data, and 3) eliminating variables with a preponderance of missing data. The outcome variable must be included (even though it is also a factor variable):</p>
+testing  &lt;- read.csv(&quot;testing.csv&quot;)
+numDataVars &lt;- dim(training)[2]</code></pre>
+<p>There are 160 variables in the training and test data. This large number is detrimental to machine learning performance.</p>
+<p>In order to reduce the number of variables used in model training and prediction, the philosophy was used to just capture the measurements that were associated with movement, since this data is closest to influencing exercise correctness decisions. Here is the R code that reduced input variables based on the previous philosophy:</p>
 <pre class="r"><code>#-- Set seed for reproducability
 set.seed(1234)
 #-- Get dimention of the data
@@ -163,15 +164,47 @@ t3 &lt;- t2[,notNA]
 #-- use final training vars in final testing set (append problem_id)
 testing &lt;- cbind(testing[,names(t3)],problem_id=testing$problem_id)
 #-- append the outcome variable in final training set
-training &lt;- cbind(t3,classe=training$classe)</code></pre>
+training &lt;- cbind(t3,classe=training$classe)
+names(training)</code></pre>
+<pre><code>##  [1] &quot;roll_belt&quot;            &quot;pitch_belt&quot;           &quot;yaw_belt&quot;            
+##  [4] &quot;total_accel_belt&quot;     &quot;gyros_belt_x&quot;         &quot;gyros_belt_y&quot;        
+##  [7] &quot;gyros_belt_z&quot;         &quot;accel_belt_x&quot;         &quot;accel_belt_y&quot;        
+## [10] &quot;accel_belt_z&quot;         &quot;magnet_belt_x&quot;        &quot;magnet_belt_y&quot;       
+## [13] &quot;magnet_belt_z&quot;        &quot;roll_arm&quot;             &quot;pitch_arm&quot;           
+## [16] &quot;yaw_arm&quot;              &quot;total_accel_arm&quot;      &quot;gyros_arm_x&quot;         
+## [19] &quot;gyros_arm_y&quot;          &quot;gyros_arm_z&quot;          &quot;accel_arm_x&quot;         
+## [22] &quot;accel_arm_y&quot;          &quot;accel_arm_z&quot;          &quot;magnet_arm_x&quot;        
+## [25] &quot;magnet_arm_y&quot;         &quot;magnet_arm_z&quot;         &quot;roll_dumbbell&quot;       
+## [28] &quot;pitch_dumbbell&quot;       &quot;yaw_dumbbell&quot;         &quot;total_accel_dumbbell&quot;
+## [31] &quot;gyros_dumbbell_x&quot;     &quot;gyros_dumbbell_y&quot;     &quot;gyros_dumbbell_z&quot;    
+## [34] &quot;accel_dumbbell_x&quot;     &quot;accel_dumbbell_y&quot;     &quot;accel_dumbbell_z&quot;    
+## [37] &quot;magnet_dumbbell_x&quot;    &quot;magnet_dumbbell_y&quot;    &quot;magnet_dumbbell_z&quot;   
+## [40] &quot;roll_forearm&quot;         &quot;pitch_forearm&quot;        &quot;yaw_forearm&quot;         
+## [43] &quot;total_accel_forearm&quot;  &quot;gyros_forearm_x&quot;      &quot;gyros_forearm_y&quot;     
+## [46] &quot;gyros_forearm_z&quot;      &quot;accel_forearm_x&quot;      &quot;accel_forearm_y&quot;     
+## [49] &quot;accel_forearm_z&quot;      &quot;magnet_forearm_x&quot;     &quot;magnet_forearm_y&quot;    
+## [52] &quot;magnet_forearm_z&quot;     &quot;classe&quot;</code></pre>
+<pre class="r"><code>numVars &lt;- length(names(training))</code></pre>
+<p>The number of variables was reduced from 160 to 53 by 1) eliminating variables not relevant to the problem (i.e. names, dates, etc.), 2) eliminating factor variables not relevant to instrument observation data, and 3) eliminating variables with a preponderance of missing data (NA’s). The outcome variable, classe, must be included (even though it is also a factor variable, it is what we’ll be predicting):</p>
 </div>
-<div id="data-partitioning-cross-validation-and-model-selection" class="section level2">
-<h2>Data Partitioning, Cross Validation and Model Selection</h2>
-<p>Once we’ve arrived at the number of variables to use, the testing data is partitioned into seperate training and test sets. The original testing data will be used for a one time final prediction. In order to assure the testing data yields a reasonable accuracy with respect to new data, K-Fold cross validation will be used on all models. A total of three models were selected for evaluation: a boosting model (gbm), a random forest model (rf), and a naive Bayes model (nb).</p>
+<div id="partitioning-of-training-data" class="section level2">
+<h2>Partitioning of Training Data</h2>
+<p>Once we’ve arrived at the number of variables to use, the original training data is partitioned into separate training and test sets. Since this data is our “in sample” data for internal training and testing. The original testing data was only used for a one time final prediction.</p>
+<pre class="r"><code>#-- Data Partitioning
+inTrain &lt;- createDataPartition(y=training$classe,p=0.7,list=FALSE)
+trn &lt;- training[inTrain,]
+tst &lt;- training[-inTrain,]</code></pre>
 </div>
-<div id="model-fitting-and-performance-evaluation" class="section level2">
-<h2>Model Fitting and Performance Evaluation</h2>
-<p>The three selected prediction algorithms are fitted using the training portion of the original training data. The test prediction is then performed utilizing the test portion of the original testing data.</p>
+<div id="cross-validataion" class="section level2">
+<h2>Cross Validataion</h2>
+<p>In order to assure the testing data yields a reasonable accuracy with respect to new data, K-Fold cross validation was used on all models. It utilizes three re-samples of the testing data to get an average of the prediction accuracy, which will be more reflective of the actual testing accuracy one would experience with new data.</p>
+<pre class="r"><code>#-- K-Fold Cross Validation Used
+crossVal &lt;- trainControl(method=&quot;cv&quot;,number=3)</code></pre>
+</div>
+<div id="model-selection-fitting-prediction-and-accuracy" class="section level2">
+<h2>Model Selection, Fitting, Prediction and Accuracy</h2>
+<p>A total of three candidate machine learning algorithm models were selected for evaluation: a boosting model (gbm), a random forest model (rf), and a naive Bayes model (nb).</p>
+<p>The three selected prediction models were fitted using the training subset of the original training data. The test (in sample) prediction was then performed utilizing the remaining test portion of the original training data.</p>
 <pre class="r"><code>#-- Fit a gbm, rf, and nb model with the in-sample train data
 gbmMdl &lt;- train(classe ~ ., data=trn,trControl=crossVal,
                             method=&quot;gbm&quot;,verbose=FALSE) 
@@ -183,14 +216,14 @@ nbMdl &lt;- train(classe ~ ., data=trn,trControl=crossVal,
 gbmPred &lt;- predict(gbmMdl,tst) 
 rfPred  &lt;- predict(rfMdl,tst)  
 nbPred  &lt;- predict(nbMdl,tst)  </code></pre>
-<p>The prediction performance of each algorithm is evaluated based on the prediction outcome of the testing portion of the original testing data. We can see from the plot that, in terms of prediction accuracy, the RF model is 1st, followed by the gbm model, and finally the nb model.</p>
+<p>The prediction performance of each algorithm was evaluated based on the prediction outcome of the testing portion of the original testing data. We can see from the following plot that, in terms of prediction accuracy, the RF model is 1st, followed by the gbm model, and finally the nb model.</p>
 <pre class="r"><code>#-- Get Performance Metrics for each model
 modPerf &lt;- resamples(list(gbm=gbmMdl, rf=rfMdl, nb=nbMdl))
 #-- Plot the performance metrics of the models
 mdlplot &lt;-bwplot(modPerf,layout=c(2,1))
 mdlplot</code></pre>
 <p><img src="data:image/png;base64,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" width="672" /></p>
-<p>We can use confusionMatrix data to get actual accuracy values:</p>
+<p>We utilized confusionMatrix() function output data to get actual accuracy values:</p>
 <pre class="r"><code>#-- Get accuracy values via confusion matricies
 gbmCM &lt;- confusionMatrix(gbmPred,tst$classe)
 rfCM  &lt;- confusionMatrix(rfPred,tst$classe)
@@ -206,11 +239,45 @@ print(accSummary)</code></pre>
 ## 3        nb 0.7386576</code></pre>
 <pre class="r"><code>bestModel &lt;- rfMdl
 bestAccuracy &lt;- round(rfCM$overall[1]*100,2)</code></pre>
-<p>We see that the rf (random forest) model has the best accuracy of 99.42 percent. With this high accuracy percentage, it doesn’t appear that model stacking is needed to boost the overall accuracy further.</p>
+<p>We see that the rf (random forest) model has the best accuracy of 99.42 percent. With this high accuracy percentage, it doesn’t appear that additional processing, such as model stacking, was needed to boost the overall accuracy further. So the random forest (rf) model was used for final prediction.</p>
+<p>The following is the confusion matrix statistics for the selected random forest model:</p>
+<pre class="r"><code>rfCM</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1674   11    0    0    0
+##          B    0 1127    4    2    1
+##          C    0    1 1018    5    2
+##          D    0    0    4  956    3
+##          E    0    0    0    1 1076
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9942         
+##                  95% CI : (0.9919, 0.996)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9927         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            1.0000   0.9895   0.9922   0.9917   0.9945
+## Specificity            0.9974   0.9985   0.9984   0.9986   0.9998
+## Pos Pred Value         0.9935   0.9938   0.9922   0.9927   0.9991
+## Neg Pred Value         1.0000   0.9975   0.9984   0.9984   0.9988
+## Prevalence             0.2845   0.1935   0.1743   0.1638   0.1839
+## Detection Rate         0.2845   0.1915   0.1730   0.1624   0.1828
+## Detection Prevalence   0.2863   0.1927   0.1743   0.1636   0.1830
+## Balanced Accuracy      0.9987   0.9940   0.9953   0.9951   0.9971</code></pre>
+<p>From the confusion matrix in the output, we can see that the actual versus predicted classe variable is correct most of the time which illustrates the 99.42% accuracy rate of the random forest model.</p>
 </div>
 <div id="final-prediction-on-testing-data" class="section level2">
 <h2>Final Prediction on Testing Data</h2>
-<p>The rf model is used to perform the final prediction on the original testing data. The testing data has 20 observations from which each exercise class (A-E) is predicted:</p>
+<p>The random forest (rf) model was used to perform the final prediction on the original testing data. The testing data has 20 observations from which an each exercise quality class (A-E) was predicted for each observation:</p>
 <pre class="r"><code>finalPred &lt;- predict(bestModel,testing)
 print(finalPred)</code></pre>
 <pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
@@ -218,7 +285,7 @@ print(finalPred)</code></pre>
 </div>
 <div id="conclusions" class="section level2">
 <h2>Conclusions</h2>
-<p>The previous analysis of exercise sensory data utilized data exploration to reduce the number of prediction variables. Cross validation was used to further enhance the predictive capabilities of three candidate machine learning algorithms. One of the three machine learning algorithms, random forests, was chosen based on its prediction accuracy (99.42%) on the test data. Finally the random forests model was used to predict the exercise class for twenty independent observations.</p>
+<p>The previous analysis of exercise sensory data utilized data exploration to assess the data and reduce the number of prediction variables. A total of three models were introduced to assess their predictive capabilities. A boosting model, a random forrest model, and a naive bayes model. Cross validation was used on the selected models to further enhance their predictive capabilities on training data. Of the three candidate machine learning models, the random forests model was chosen based on its prediction accuracy (99.42%) on the test data. Finally the random forests model was used to predict the exercise quality classification for twenty independent observations.</p>
 </div>
 </div>
 
